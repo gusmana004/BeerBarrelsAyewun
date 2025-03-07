@@ -1,0 +1,26 @@
+.ButtonQR img{
+    width: 50%;
+    height: 50%;
+}
+
+.ButtonQR{
+    background-color: black;
+    width: 100px;
+    height: 100px;
+    border-radius: 45%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+}
+
+.ButtonQR:hover{
+    transform: scale(1.1);
+    
+}
+.ButtonQR:active{
+    transform: scale(0.95);
+    
+}
