@@ -1,6 +1,8 @@
 import './App.css';
 import { ButtonQR } from './components/ButtonQR';
 import Logo from './assets/LogoAyewun.png';
+import Footer from './components/Footer';
+import FormCode from './components/FormCode';
 
 function App() {
   return (
@@ -9,20 +11,18 @@ function App() {
         <div>
           <img src={Logo} alt="Logo" className="Logo"/>
         </div>
-        <h3 className="TitleContaiiner">
+        <h1 className="TitleContaiiner">
           Escanear QR Ayewun
-        </h3>
+        </h1>
         <div className="Button_Container">
           <ButtonQR  icon='/QR5.jpg'/>
         </div>
         <p className='Text'>
         Escanea para acceder o modificar datos e información de manera rápida y sencilla.
         </p>
+        <FormCode/>
       </div>
-      <span className="Footer">
-        Desarrollado por 
-      </span>
-      
+      <Footer/>
     </div>
     
   );
