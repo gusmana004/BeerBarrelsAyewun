@@ -6,10 +6,12 @@ import fs from "fs";
 export default defineConfig({
   plugins: [react()],
   server: {
+    port: 3000,
     host: true,
-    https: {
-      key: fs.readFileSync("./localhost+3-key.pem"),
-      cert: fs.readFileSync("./localhost+3.pem"),
-    },
+    allowedHosts: ['.ngrok-free.app'],
+    //https: {
+      //key: fs.readFileSync("./localhost+3-key.pem"),
+      //cert: fs.readFileSync("./localhost+3.pem"),
+    //}
   },
 });
