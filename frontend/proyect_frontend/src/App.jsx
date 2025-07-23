@@ -3,6 +3,7 @@ import { ButtonQR } from "./components/ButtonQR";
 import Logo from "./assets/LogoAyewun.png";
 import Footer from "./components/Footer";
 import FormCode from "./components/FormCode";
+import { FaCamera } from "react-icons/fa";
 
 function App() {
   return (
@@ -13,7 +14,7 @@ function App() {
         </div>
         <h1 className="TitleContaiiner">Escanear QR Ayewun</h1>
         <div className="Button_Container">
-          <ButtonQR icon="/QR5.jpg" />
+          <ButtonQR icon={<FaCamera />} />
         </div>
         <p className="Text">
           Escanea para acceder o modificar datos e información de manera rápida

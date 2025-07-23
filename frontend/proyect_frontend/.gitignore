@@ -24,3 +24,5 @@ localhost+3.pem
 *.njsproj
 *.sln
 *.sw?
+
+.env
