@@ -22,11 +22,14 @@ function Home() {
           Eventos
         </button>
       </Link>
-      <Link to="/informe-barriles">
-        <button className="px-7 py-4 text-3xl text-white border-2 border-[#fff7d4] rounded-2xl bg-[#3f3f3f] hover:bg-[#fff7d4] hover:text-[#3f3f3f] duration-300">
-          Informe de Barriles
-        </button>
-      </Link>
+      <a
+        href="https://docs.google.com/spreadsheets/d/1LvimH8GQ6LW1_HE_S70RWiCDGJr327NhYcBR1nTUYH8/edit?usp=sharing"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="px-11 py-4 text-3xl text-white border-2 border-[#fff7d4] rounded-2xl bg-[#3f3f3f] hover:bg-[#fff7d4] hover:text-[#3f3f3f] duration-300"
+      >
+        Informe Barriles
+      </a>
     </div>
   );
 }
