@@ -1,0 +1,17 @@
+### OBTENER BARRILES
+GET https://lzpdqzzobdjaosxydixl.supabase.co/rest/v1/barriles?select=*
+apikey: {{$dotenv SUPABASE_ANON_KEY}}
+Content-Type: application/json
+
+
+### 
+GET https://lzpdqzzobdjaosxydixl.supabase.co/rest/v1/estados_barril?sabor=eq.IPA&select=*
+apikey: {{$dotenv SUPABASE_ANON_KEY}}
+Content-Type: application/json
+
+
+### OBTENER BARRILES FUNCTION EDGE
+curl -L -X POST 'https://lzpdqzzobdjaosxydixl.supabase.co/functions/v1/getLitrosBarriles' \
+  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6cGRxenpvYmRqYW9zeHlkaXhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5ODY2NDYsImV4cCI6MjA2ODU2MjY0Nn0.5LTCxTiXpMFMtLVw1REjdgPEm9ju_XNaiHsKLxBc5xw' \
+  -H 'Content-Type: application/json' \
+  --data '{"name":"Functions"}'

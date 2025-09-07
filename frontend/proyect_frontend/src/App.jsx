@@ -1,29 +1,51 @@
-import "./App.css";
-import { ButtonQR } from "./components/ButtonQR";
 import Logo from "./assets/LogoAyewun.png";
 import Footer from "./components/Footer";
-import FormCode from "./components/FormCode";
-import { FaCamera } from "react-icons/fa";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import CameraQR from "./pages/CameraQR";
+import Eventos from "./pages/Eventos";
+import InformeBarriles from "./pages/InformeBarriles";
+
+function Home() {
+  return (
+    <div className="flex flex-col justify-center items-center gap-5">
+      <img src={Logo} alt="Logo" className="size-72" />
+      <h1 className="text-3xl text-[#fff7d4] font-semibold py-8">
+        //////////////////////
+      </h1>
+      <Link to="/camera-qr">
+        <button className="px-18 py-4 text-3xl text-white border-2 border-[#fff7d4] rounded-2xl bg-[#3f3f3f] hover:bg-[#fff7d4] hover:text-[#3f3f3f] duration-300">
+          Camara QR
+        </button>
+      </Link>
+      <Link to="/eventos">
+        <button className="px-24 py-4 text-3xl text-white border-2 border-[#fff7d4] rounded-2xl bg-[#3f3f3f] hover:bg-[#fff7d4] hover:text-[#3f3f3f] duration-300">
+          Eventos
+        </button>
+      </Link>
+      <Link to="/informe-barriles">
+        <button className="px-7 py-4 text-3xl text-white border-2 border-[#fff7d4] rounded-2xl bg-[#3f3f3f] hover:bg-[#fff7d4] hover:text-[#3f3f3f] duration-300">
+          Informe de Barriles
+        </button>
+      </Link>
+    </div>
+  );
+}
 
 function App() {
   return (
-    <div className="AppContainer">
-      <div className="Card">
-        <div>
-          <img src={Logo} alt="Logo" className="Logo" />
+    <Router>
+      <div className="bg-[#1f1f1f] min-h-screen flex flex-col items-center justify-center">
+        <div className="Card">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/camera-qr" element={<CameraQR />} />
+            <Route path="/eventos" element={<Eventos />} />
+            <Route path="/informe-barriles" element={<InformeBarriles />} />
+          </Routes>
         </div>
-        <h1 className="TitleContaiiner">Escanear QR Ayewun</h1>
-        <div className="Button_Container">
-          <ButtonQR icon={<FaCamera />} />
-        </div>
-        <p className="Text">
-          Escanea para acceder o modificar datos e información de manera rápida
-          y sencilla.
-        </p>
-        <FormCode />
+        <Footer />
       </div>
-      <Footer />
-    </div>
+    </Router>
   );
 }
 

@@ -1,4 +1,4 @@
-import "../styles/Buttons.css";
+//import "../styles/Buttons.css";
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import React from "react";
 import { supabase } from "../supabaseClient"; // Importa tu cliente de Supabase
