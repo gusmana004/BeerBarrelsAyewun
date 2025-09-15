@@ -1,17 +1,41 @@
-### OBTENER BARRILES
-GET https://lzpdqzzobdjaosxydixl.supabase.co/rest/v1/barriles?select=*
-apikey: {{$dotenv SUPABASE_ANON_KEY}}
-Content-Type: application/json
 
 
-### 
-GET https://lzpdqzzobdjaosxydixl.supabase.co/rest/v1/estados_barril?sabor=eq.IPA&select=*
-apikey: {{$dotenv SUPABASE_ANON_KEY}}
-Content-Type: application/json
+
+###
+curl -X POST "https://lzpdqzzobdjaosxydixl.supabase.co/functions/v1/get-barril-info-actual" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {{$dotenv SUPABASE_ANON_KEY}}" \
+  -d '{"barril_id": "B001"}'
 
 
-### OBTENER BARRILES FUNCTION EDGE
-curl -L -X POST 'https://lzpdqzzobdjaosxydixl.supabase.co/functions/v1/getLitrosBarriles' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6cGRxenpvYmRqYW9zeHlkaXhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5ODY2NDYsImV4cCI6MjA2ODU2MjY0Nn0.5LTCxTiXpMFMtLVw1REjdgPEm9ju_XNaiHsKLxBc5xw' \
-  -H 'Content-Type: application/json' \
-  --data '{"name":"Functions"}'
+### CASO BARRIL B001 - INFO ACTUAL
+curl -X POST "https://lzpdqzzobdjaosxydixl.supabase.co/functions/v1/main-info-barriles" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {{$dotenv SUPABASE_ANON_KEY}}" \
+  -d '{"tipo": "ACTUAL", "barril_id": "B001"}'
+### CASO BARRIL B001 - INFO HISTORICA
+curl -X POST "https://lzpdqzzobdjaosxydixl.supabase.co/functions/v1/main-info-barriles" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {{$dotenv SUPABASE_ANON_KEY}}" \
+  -d '{"tipo": "HISTORICO", "barril_id": "B001"}'
+  
+### CASO TODOS LOS BARRILES - INFO ACTUAL
+curl -X POST "https://lzpdqzzobdjaosxydixl.supabase.co/functions/v1/main-info-barriles" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {{$dotenv SUPABASE_ANON_KEY}}" \
+  -d '{"tipo": "ACTUAL"}'
+### CASO TODOS LOS BARRILES - INFO HISTORICA
+curl -X POST "https://lzpdqzzobdjaosxydixl.supabase.co/functions/v1/main-info-barriles" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {{$dotenv SUPABASE_ANON_KEY}}" \
+  -d '{"tipo": "HISTORICO"}'
+
+
+###  OBTENER INFO DE BARRILES VACIADOS - FIX LATER !!!!
+curl -X POST "https://lzpdqzzobdjaosxydixl.supabase.co/functions/v1/main-info-vaciado" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer {{$dotenv SUPABASE_ANON_KEY}}" \
+-d '{
+  "barril_id": "B003",
+  "evento": "Festival de Cerveza"
+}'
