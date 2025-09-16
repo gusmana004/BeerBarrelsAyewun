@@ -1,106 +1,190 @@
-// Nuevo componente para manejar los cambios de estado del barril existente
 import { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
+
 export function BarrelStateForm({
   barrelData,
   barrelStateData,
   setMessage,
   setBarrelStateData,
 }) {
-  const [selectedFlavor, setSelectedFlavor] = useState("");
-  const [selectedPlace, setSelectedPlace] = useState("");
+  const [sabores, setSabores] = useState([]);
+  const [selectedSabor, setSelectedSabor] = useState("");
+  const [selectedPlaceId, setSelectedPlaceId] = useState(""); // 👈 ID de lugar
+  const [lugares, setLugares] = useState([]);
+  const [loadingLugares, setLoadingLugares] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState("");
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [loadingSabores, setLoadingSabores] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [estadosMap, setEstadosMap] = useState({}); // nombre -> id
 
-  // 🔹 Cargar eventos si el usuario selecciona 'En Evento'
+  // 🔹 Cargar sabores
   useEffect(() => {
-    if (selectedPlace === "Evento") {
-      const fetchEvents = async () => {
-        setLoadingEvents(true);
-        const { data, error } = await supabase
-          .from("eventos")
-          .select("id, nombre")
-          .is("fecha_fin", null) // Solo eventos activos
-          .order("fecha_inicio", { ascending: false });
+    const fetchSabores = async () => {
+      setLoadingSabores(true);
+      const { data, error } = await supabase
+        .from("sabores")
+        .select("id,nombre");
+      if (error) setMessage("❌ Error al cargar los sabores.");
+      else setSabores(data);
+      setLoadingSabores(false);
+    };
+    fetchSabores();
+  }, [setMessage]);
 
-        if (error) {
-          setMessage("❌ Error al cargar los eventos.");
-        } else {
-          setEvents(data);
-        }
-        setLoadingEvents(false);
-      };
-      fetchEvents();
+  // 🔹 Cargar estados
+  useEffect(() => {
+    const fetchEstados = async () => {
+      const { data, error } = await supabase
+        .from("estados")
+        .select("id,nombre");
+      if (!error && data) {
+        const map = {};
+        data.forEach((e) => (map[e.nombre] = e.id));
+        setEstadosMap(map);
+      }
+    };
+    fetchEstados();
+  }, []);
+
+  // 🔹 Cargar eventos si se selecciona Evento
+  useEffect(() => {
+    if (selectedPlaceId) {
+      const lugar = lugares.find((l) => l.id === parseInt(selectedPlaceId));
+      if (lugar?.nombre === "Evento") {
+        const fetchEvents = async () => {
+          setLoadingEvents(true);
+          const { data, error } = await supabase
+            .from("eventos")
+            .select("id,nombre")
+            .order("fecha_inicio", { ascending: false });
+          if (error) setMessage("❌ Error al cargar los eventos.");
+          else setEvents(data);
+          setLoadingEvents(false);
+        };
+        fetchEvents();
+      }
     }
-  }, [selectedPlace, setMessage]);
+  }, [selectedPlaceId, lugares, setMessage]);
 
-  // 🔹 Enviar el nuevo estado del barril
+  // 🔹 Cargar lugares disponibles
+  useEffect(() => {
+    const fetchLugares = async () => {
+      setLoadingLugares(true);
+      const { data, error } = await supabase
+        .from("lugares")
+        .select("id,nombre")
+        .eq("disponibilidad", true)
+        .order("nombre");
+      if (error) setMessage("❌ Error al cargar los lugares.");
+      else setLugares(data);
+      setLoadingLugares(false);
+    };
+    fetchLugares();
+  }, [setMessage]);
+
+  // filtar Eventos para solo poder seleccionar los Activos
+  useEffect(() => {
+    if (selectedPlaceId) {
+      const lugar = lugares.find((l) => l.id === parseInt(selectedPlaceId));
+      if (lugar?.nombre === "Evento") {
+        const fetchEvents = async () => {
+          setLoadingEvents(true);
+          const { data, error } = await supabase
+            .from("eventos")
+            .select("id,nombre")
+            .is("fecha_fin", null) // solo eventos sin fecha de fin
+            .order("fecha_inicio", { ascending: false });
+
+          if (error) setMessage("❌ Error al cargar los eventos.");
+          else setEvents(data);
+
+          setLoadingEvents(false);
+        };
+        fetchEvents();
+      }
+    }
+  }, [selectedPlaceId, lugares, setMessage]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsUpdating(true);
-    let newBarrelState;
-    let successMessage;
+
+    let newState = {};
+    let successMessage = "";
+
+    const lugar = lugares.find((l) => l.id === parseInt(selectedPlaceId));
 
     if (barrelStateData.estado === "Vacio" || !barrelStateData.estado) {
-      if (!selectedFlavor || !selectedPlace) {
-        setMessage("Por favor, seleccione un sabor y lugar.");
+      if (
+        !selectedSabor ||
+        !selectedPlaceId ||
+        (lugar?.nombre === "Evento" && !selectedEvent)
+      ) {
+        setMessage("Por favor, seleccione sabor, lugar y evento si aplica.");
         setIsUpdating(false);
         return;
       }
 
-      if (selectedPlace === "Evento" && !selectedEvent) {
-        setMessage("Por favor, seleccione un evento.");
-        setIsUpdating(false);
-        return;
-      }
-
-      newBarrelState = {
+      newState = {
         barril_id: barrelData.id,
-        estado: "Lleno",
-        sabor: selectedFlavor,
-        lugar: selectedPlace,
-        evento_id: selectedPlace === "Evento" ? selectedEvent : null,
+        estado_id: estadosMap["Lleno"],
+        sabor_id: selectedSabor,
+        lugar_id: selectedPlaceId,
+        evento_id: lugar?.nombre === "Evento" ? selectedEvent : null,
         fecha_cambio: new Date().toISOString(),
         fecha_vaciado: null,
       };
 
       successMessage = `✅ Barril con ID '${barrelData.id}' declarado como lleno.`;
-    } else if (
-      barrelStateData.estado === "Lleno" ||
-      barrelStateData.estado === "En Evento"
-    ) {
-      newBarrelState = {
+    } else {
+      // Vaciar barril
+      newState = {
         barril_id: barrelData.id,
-        estado: "Vacio",
-        sabor: null,
-        lugar: null,
+        estado_id: estadosMap["Vacio"],
+        sabor_id: null,
+        lugar_id: null,
         evento_id: null,
         fecha_cambio: new Date().toISOString(),
         fecha_vaciado: new Date().toISOString(),
       };
+
       successMessage = `✅ Barril con ID '${barrelData.id}' declarado como vacío.`;
     }
 
-    if (newBarrelState) {
-      // Usamos upsert para actualizar el registro existente
-      const { error } = await supabase
-        .from("estado_actual_barril")
-        .upsert([newBarrelState]);
+    const { error } = await supabase
+      .from("estado_actual_barril")
+      .upsert([newState]);
 
-      if (error) {
-        setMessage("❌ Error al actualizar el estado del barril.");
-      } else {
-        setMessage(successMessage);
+    if (error) {
+      setMessage("❌ Error al actualizar el estado del barril.");
+    } else {
+      const { data: estadoActual, error: estadoError } = await supabase.rpc(
+        "get_barril_info",
+        {
+          bid: barrelData.id,
+        }
+      );
+
+      if (!estadoError && estadoActual.length > 0) {
+        const estado = estadoActual[0];
         setBarrelStateData({
-          ...barrelStateData,
-          estado: newBarrelState.estado,
+          estado: estado.estado,
+          sabor: estado.sabor,
+          lugar: estado.lugar,
+          evento: estado.evento,
+          ultima_vez_llenado: estado.ultima_vez_llenado,
         });
-        setSelectedFlavor("");
-        setSelectedPlace("");
-        setSelectedEvent("");
+        setMessage(successMessage);
+      } else {
+        setMessage("❌ Error al obtener el estado actualizado del barril.");
       }
+
+      // Reset de selects
+      setSelectedSabor("");
+      setSelectedPlaceId("");
+      setSelectedEvent("");
     }
 
     setIsUpdating(false);
@@ -110,6 +194,7 @@ export function BarrelStateForm({
     <div className="bg-[#3f3f3f] p-4 rounded-xl mt-4">
       <h3 className="text-xl font-bold mb-2 text-center">Barril Existente</h3>
       <p className="text-lg font-bold text-center mb-4">ID: {barrelData.id}</p>
+
       <p className="text-center font-semibold mb-4">
         Estado Actual:
         <span
@@ -123,36 +208,73 @@ export function BarrelStateForm({
         </span>
       </p>
 
-      {/* Condicional para cambiar de Vacío a Lleno */}
+      {barrelStateData.estado !== "Vacio" && (
+        <div className="text-center mb-4">
+          {barrelStateData.sabor && (
+            <p className="text-sm">
+              <span className="font-bold">Sabor:</span> {barrelStateData.sabor}
+            </p>
+          )}
+          {barrelStateData.lugar && (
+            <p className="text-sm">
+              <span className="font-bold">Lugar:</span> {barrelStateData.lugar}
+            </p>
+          )}
+          {barrelStateData.evento && (
+            <p className="text-sm">
+              <span className="font-bold">Evento:</span>{" "}
+              {barrelStateData.evento}
+            </p>
+          )}
+        </div>
+      )}
+
       {(barrelStateData.estado === "Vacio" || !barrelStateData.estado) && (
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm font-medium mb-1">Sabor</label>
-            <input
-              type="text"
-              value={selectedFlavor}
-              onChange={(e) => setSelectedFlavor(e.target.value)}
-              className="w-full bg-[#2c2c2c] rounded-lg p-2 text-white placeholder-gray-500 focus:outline-none"
-              placeholder="Ej. Golden Ale"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Lugar</label>
-            <select
-              value={selectedPlace}
-              onChange={(e) => setSelectedPlace(e.target.value)}
-              className="w-full bg-[#2c2c2c] rounded-lg p-2 text-white focus:outline-none"
-              required
-            >
-              <option value="">Seleccione un lugar</option>
-              <option value="Cámara">Cámara</option>
-              <option value="Carro">Carro</option>
-              <option value="Evento">Evento</option>
-            </select>
+            {loadingSabores ? (
+              <p>Cargando sabores...</p>
+            ) : (
+              <select
+                value={selectedSabor}
+                onChange={(e) => setSelectedSabor(e.target.value)}
+                className="w-full bg-[#2c2c2c] rounded-lg p-2 text-white focus:outline-none"
+                required
+              >
+                <option value="">Seleccione un sabor</option>
+                {sabores.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
-          {selectedPlace === "Evento" && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Lugar</label>
+            {loadingLugares ? (
+              <p>Cargando lugares...</p>
+            ) : (
+              <select
+                value={selectedPlaceId}
+                onChange={(e) => setSelectedPlaceId(e.target.value)}
+                className="w-full bg-[#2c2c2c] rounded-lg p-2 text-white focus:outline-none"
+                required
+              >
+                <option value="">Seleccione un lugar</option>
+                {lugares.map((lugar) => (
+                  <option key={lugar.id} value={lugar.id}>
+                    {lugar.nombre}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {lugares.find((l) => l.id === parseInt(selectedPlaceId))?.nombre ===
+            "Evento" && (
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">
                 Seleccionar Evento
@@ -167,9 +289,9 @@ export function BarrelStateForm({
                   required
                 >
                   <option value="">Seleccione un evento</option>
-                  {events.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {event.nombre}
+                  {events.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.nombre}
                     </option>
                   ))}
                 </select>
@@ -189,9 +311,7 @@ export function BarrelStateForm({
         </form>
       )}
 
-      {/* Condicional para cambiar a Vacío */}
-      {(barrelStateData.estado === "Lleno" ||
-        barrelStateData.estado === "En Evento") && (
+      {barrelStateData.estado !== "Vacio" && barrelStateData.estado && (
         <div className="mt-4">
           <p className="text-center mb-4">
             ¿Desea marcar este barril como vacío?

@@ -10,90 +10,100 @@ import { useNavigate } from "react-router-dom";
 export function AddBarrel() {
   const navigate = useNavigate();
   const [barrelId, setBarrelId] = useState("");
-  const [barrelCapacity, setBarrelCapacity] = useState("");
+  const [selectedTipoId, setSelectedTipoId] = useState(""); // Tipo de barril al crear
   const [scanMode, setScanMode] = useState(false);
   const [message, setMessage] = useState("");
   const [barrelData, setBarrelData] = useState(null);
   const [barrelStateData, setBarrelStateData] = useState(null);
 
-  // 🔹 Nueva función para
-  //  y su estado
+  // 🔹 Buscar barril por ID y traer estado actual
   const buscarBarril = async (id) => {
     setBarrelData(null);
     setBarrelStateData(null);
     setScanMode(false);
-    setMessage("Buscando barril...");
 
     if (!id) {
       setMessage("Por favor, ingrese un ID de barril.");
       return;
     }
 
-    try {
-      const { data: barrel, error } = await supabase
-        .from("barriles")
-        .select("id, numero, capacidad")
-        .eq("id", id)
-        .single();
+    setMessage("Buscando barril...");
 
-      if (error && error.code === "PGRST116") {
+    try {
+      // 1️⃣ Traer info básica del barril
+      const { data: barrels, error: barrelsError } = await supabase.rpc(
+        "get_barriles",
+        { bid: id }
+      );
+
+      if (barrelsError) throw barrelsError;
+
+      const barrel = barrels[0];
+
+      if (!barrel) {
         setMessage(`❌ Barril con ID '${id}' no encontrado.`);
         setBarrelData({ id });
         setBarrelStateData({ estado: "No encontrado" });
-      } else if (barrel) {
-        // Barril encontrado, ahora busca su estado
-        const { data: estado, error: estadoError } = await supabase
-          .from("estado_actual_barril")
-          .select("estado, sabor, lugar, evento_id")
-          .eq("barril_id", id)
-          .order("fecha_cambio", { ascending: false })
-          .limit(1)
-          .single();
-
-        setBarrelData(barrel);
-
-        if (estadoError && estadoError.code === "PGRST116") {
-          // Barril existe pero no tiene un estado registrado
-          setMessage(
-            `✅ Barril con ID '${id}' encontrado. Se necesita definir su estado.`
-          );
-          setBarrelStateData({ estado: "Vacio" }); // Lo tratamos como vacío para inicializarlo
-        } else if (estado) {
-          setMessage(
-            `✅ Barril con ID '${id}' encontrado. Estado: ${estado.estado}`
-          );
-          setBarrelStateData(estado);
-        } else {
-          setMessage("❌ Error al buscar el estado del barril.");
-        }
-      } else {
-        setMessage("❌ Error en la búsqueda.");
+        return;
       }
-    } catch {
-      setMessage("❌ Error inesperado.");
+
+      setBarrelData({
+        id: barrel.barril_id,
+        numero: barrel.numero,
+        tipo_id: barrel.tipo_id,
+        capacidad: barrel.capacidad,
+        ...barrel,
+      });
+
+      // 2️⃣ Traer estado actual del barril
+      const { data: estadoActual, error: estadoError } = await supabase.rpc(
+        "get_barril_info", // 👈 nombre correcto
+        { bid: id }
+      );
+
+      if (estadoError) throw estadoError;
+
+      const estado = estadoActual[0];
+
+      setBarrelStateData({
+        estado: estado?.estado || "Vacio",
+        sabor: estado?.sabor || null,
+        lugar: estado?.lugar || null,
+        evento: estado?.evento || null,
+        ultima_vez_llenado: estado?.ultima_vez_llenado || null,
+      });
+
+      setMessage(
+        `✅ Barril con ID '${id}' encontrado. Estado: ${
+          estado?.estado || "Vacio"
+        }`
+      );
+    } catch (err) {
+      console.error(err);
+      setMessage("❌ Error inesperado al buscar barril.");
     }
   };
 
-  // 🔹 Cuando el usuario busca manualmente
+  // 🔹 Búsqueda manual
   const handleManualSubmit = (e) => {
     e.preventDefault();
     buscarBarril(barrelId);
   };
 
-  // 🔹 Cuando escanea un QR
+  // 🔹 Escaneo QR
   const handleQRResult = (id) => {
     setBarrelId(id);
     setMessage("📡 Escaneado, buscando barril...");
     buscarBarril(id);
   };
 
-  // 🔹 Crear nuevo barril (lógica original)
+  // 🔹 Crear nuevo barril
   const handleCreateBarrel = async (e) => {
     e.preventDefault();
     setMessage("Creando nuevo barril...");
 
-    if (!barrelCapacity || isNaN(barrelCapacity) || barrelCapacity <= 0) {
-      setMessage("Por favor, ingrese una capacidad válida.");
+    if (!selectedTipoId) {
+      setMessage("Por favor, seleccione un tipo de barril.");
       return;
     }
 
@@ -108,9 +118,9 @@ export function AddBarrel() {
       const nextBarrelNumber = lastBarrel ? lastBarrel.numero + 1 : 1;
 
       const newBarrel = {
-        id: barrelData.id,
+        id: barrelId,
         numero: nextBarrelNumber,
-        capacidad: parseFloat(barrelCapacity),
+        tipo_id: parseInt(selectedTipoId),
       };
 
       const { error: insertError } = await supabase
@@ -123,9 +133,11 @@ export function AddBarrel() {
         setMessage(`✅ Barril con ID '${newBarrel.id}' creado exitosamente.`);
         setBarrelData(newBarrel);
         setBarrelId("");
-        setBarrelCapacity("");
+        setSelectedTipoId("");
+        setBarrelStateData({ estado: "Vacio" });
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       setMessage("❌ Error inesperado al crear.");
     }
   };
@@ -133,7 +145,8 @@ export function AddBarrel() {
   return (
     <div className="w-full max-w-lg bg-[#2c2c2c] text-white rounded-2xl shadow-lg p-6">
       <h2 className="text-2xl font-bold mb-6 text-center">Gestor Barril</h2>
-      {/* Botón de escaneo, visible si no se ha buscado un barril */}
+
+      {/* Botón escaneo */}
       {!scanMode && !barrelData && (
         <button
           onClick={() => setScanMode(true)}
@@ -142,6 +155,7 @@ export function AddBarrel() {
           📷 Escanear QR
         </button>
       )}
+
       {/* Escáner de QR */}
       {scanMode && (
         <QRScanner
@@ -149,7 +163,8 @@ export function AddBarrel() {
           onCancel={() => setScanMode(false)}
         />
       )}
-      {/* Formulario de entrada manual, visible si no se ha buscado un barril */}
+
+      {/* Formulario manual */}
       {!scanMode && !barrelData && (
         <BarrelForm
           barrelId={barrelId}
@@ -157,19 +172,23 @@ export function AddBarrel() {
           onSubmit={handleManualSubmit}
         />
       )}
+
       {/* Mensaje de estado */}
       <StatusMessage message={message} />
 
-      {/* Formulario para crear un barril nuevo (si se escaneó un ID que no existe) */}
-      {!scanMode && barrelData && !barrelData.numero && (
-        <CreateBarrelForm
-          barrelId={barrelData.id}
-          barrelCapacity={barrelCapacity}
-          setBarrelCapacity={setBarrelCapacity}
-          onSubmit={handleCreateBarrel}
-        />
-      )}
-      {/* Nuevo componente para gestionar el estado de un barril existente */}
+      {/* Formulario creación de nuevo barril */}
+      {!scanMode &&
+        barrelData &&
+        barrelStateData?.estado === "No encontrado" && (
+          <CreateBarrelForm
+            barrelId={barrelId}
+            selectedTipoId={selectedTipoId}
+            setSelectedTipoId={setSelectedTipoId}
+            onSubmit={handleCreateBarrel}
+          />
+        )}
+
+      {/* Estado de barril existente */}
       {barrelStateData && barrelStateData.estado !== "No encontrado" && (
         <BarrelStateForm
           barrelData={barrelData}
@@ -178,8 +197,9 @@ export function AddBarrel() {
           setBarrelStateData={setBarrelStateData}
         />
       )}
+
       <button
-        onClick={() => navigate("/")} // "/" sería tu ruta del menú principal
+        onClick={() => navigate("/")}
         className="w-full mt-4 bg-[#3f3f3f] hover:bg-red-500 duration-300 text-lg font-semibold py-2 px-4 rounded-xl"
       >
         Volver al Menú Principal
@@ -187,4 +207,5 @@ export function AddBarrel() {
     </div>
   );
 }
+
 export default AddBarrel;
